@@ -1,0 +1,20 @@
+{
+    "nodes": [
+        {
+            "id": "node1",
+            "component": "castor.component.event.acme.HelloWorld"
+        },
+        {
+            "id": "node2",
+            "component": "castor.component.system.Print"
+        }
+    ],
+    "links": [
+        {
+            "source": "node1:value",
+            "targets": [
+                "node2:value"
+            ]
+        }
+    ]
+}

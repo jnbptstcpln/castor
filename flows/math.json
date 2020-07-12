@@ -1,0 +1,72 @@
+{
+    "nodes": [
+        {
+            "id": "node1",
+            "component": "math.Addition",
+            "inputs": {
+                "a": 2,
+                "b": 3
+            },
+            "execution": 0
+        },
+        {
+            "id": "node2",
+            "component": "math.Multiplication",
+            "inputs": {
+                "b": 4
+            }
+        },
+        {
+            "id": "node3",
+            "component": "math.Addition",
+            "inputs": {
+                "b": 10
+            }
+        },
+        {
+            "id": "node4",
+            "component": "math.Addition"
+        },
+        {
+            "id": "node5",
+            "component": "system.Print"
+        },
+        {
+            "id": "node6",
+            "component": "system.Exit"
+        }
+    ],
+    "links": [
+        {
+            "source": "node1:result",
+            "targets": [
+                "node2:a",
+                "node3:a"
+            ]
+        },
+        {
+            "source": "node2:result",
+            "targets": [
+                "node4:a"
+            ]
+        },
+        {
+            "source": "node3:result",
+            "targets": [
+                "node4:b"
+            ]
+        },
+        {
+            "source": "node4:result",
+            "targets": [
+                "node5:value"
+            ]
+        },
+        {
+            "source": "node5:value",
+            "targets": [
+                "node6:value"
+            ]
+        }
+    ]
+}
