@@ -1,6 +1,8 @@
 
 import importlib
+import hashlib
 import re
+import os
 
 from castor.exception import StopException, ExitException
 from castor.helper import Doc
@@ -9,9 +11,18 @@ class Component:
 
     def __init__(self, settings):
         self.settings = settings
+        self.node = None
         self._inputs = None
         self._outputs = None
         self._doc = None
+
+    @property
+    def flow(self):
+        return self.node.flow
+
+    @property
+    def environment(self):
+        return self.node.flow.environment
 
     @property
     def doc(self):
@@ -71,46 +82,145 @@ class Library:
 
     def __init__(self, core):
         self.core = core
+        self.modules = {}
 
-    def get_local(self, id, settings=None):
+
+    def get_module(self, module_id, use_remote=True):
+        """
+        Return the corresponding module stored if self.modules or load it if it wasn't already
+        if use_remote=True, the library fetch update from Pollux or install the module locally if it wasn't already
+        """
+        if not module_id in self.modules.keys():
+            path = self.id_to_path(module_id)
+            if os.path.exists(path):
+                try:
+                    if use_remote:
+                        self.update(module_id)
+                    self.modules[module_id] = importlib.import_module("castor.flow.component." + module_id)
+                except ModuleNotFoundError as e:
+                    message = "Aucun module nommé '{}' n'a pu être trouvé en local".format(module_id)
+                    self.core.log(message)
+                    raise Exception(message)
+                except BaseException as e:
+                    message = "Une erreur est survenu lors du chargement du module '{}' : {}".format(module_id, e)
+                    self.core.log(message)
+                    raise Exception(message)
+
+            elif use_remote:
+                # Search the module on Pollux
+                modules = self.remote_search(module_id)
+                if len(modules) == 0:
+                    message = "Aucun module nommé '{}' n'a pu être trouvé sur Pollux".format(module_id)
+                    self.core.log(message)
+                    raise Exception(message)
+                self.install(module_id)
+                return self.get_module(module_id, use_remote)
+
+            else:
+                message = "Aucun module nommé '{}' n'a pu être trouvé en local".format(module_id)
+                self.core.log(message)
+                raise Exception(message)
+
+        return self.modules[module_id]
+
+    def get_component(self, id, settings=None, use_remote=True):
+        """
+        Return an instance of the corresponding Component
+        """
+
+        # Break the component's id in two part : module's id and component's name
         module_part = id.split(".")
         component_name = module_part.pop()
         module_id = ".".join(module_part)
 
-        # Try to import the given module
-        # We add the needed prefix to get a valid module name
-        try:
-            module = importlib.import_module("castor.flow.component." + module_id)
-        except ModuleNotFoundError:
-            raise Exception("Aucun module nommé '" + module_id + "'")
+        # Get the module
+        module = self.get_module(module_id, use_remote)
 
         try:
             return getattr(module, component_name)(ComponentSettings(settings))
         except AttributeError:
             raise Exception("Aucun composant nommé '" + component_name + "' au sein du module '" + module_id + "'")
 
-    def get(self, id, settings=None, fetch_remote=True):
-        # Try to get the component locally
+    def get(self, id, settings=None, use_remote=True):
+        """
+        Return an instance of the corresponding Component
+        """
+        return self.get_component(id, settings, use_remote)
+
+    def hash(self, module_id):
+        """
+        Return the hash of the file corresponding to the given module
+        """
+        sha1sum = hashlib.sha1()
+        with open(self.id_to_path(module_id), 'rb') as source:
+            block = source.read(2 ** 16)
+            while len(block) != 0:
+                sha1sum.update(block)
+                block = source.read(2 ** 16)
+        return sha1sum.hexdigest()
+
+    def id_to_path(self, module_id):
+        """
+        Concert the given module_id to the correspond path to the file
+        :param module_id:
+        :return:
+        """
+        libraryPath = os.path.dirname(__file__)
+        parts = module_id.split('.')
+        fileName = "{}.py".format(parts.pop())
+        modulePath = os.path.join(libraryPath, *parts, fileName)
+        return modulePath
+
+    def remote_search(self, module_id):
+        """
+        Perform a search on Pollux for the given module_id
+        :param module_id:
+        :return:
+        """
         try:
-            return self.get_local(id, settings)
+            rep = self.core.pollux.api.get("/api/modules/search", {"module_id": module_id})
+            if rep.get("success", False):
+                return rep.get("payload", {})
         except Exception as e:
-            if not fetch_remote:
-                raise e
-            pass
-        # Connect to Pollux to update or install the module
-
-    def version(self, module_id):
-        try:
-            module = importlib.import_module("castor.flow.component." + module_id)
-            return module.__doc__
-        except ModuleNotFoundError:
-            raise Exception("Aucun module nommé '" + module_id + "'")
-
+            self.core.log(e)
+            raise Exception(e)
 
     def install(self, module_id):
-        pass
+        """
+        Fetch the content of the corresponding module and store it as a Python file inside
+        :param module_id:
+        :return:
+        """
+        try:
+            rep = self.core.pollux.api.get("/api/modules/i/{}/download".format(module_id))
+            if rep.get("success", False):
+                payload = rep.get("payload", {})
+                path = self.id_to_path(module_id)
+                # Create parent directories
+                if not os.path.exists(os.path.dirname(path)):
+                    os.makedirs(os.path.dirname(path))
+                with open(path, 'w') as f:
+                    f.write(payload.get('content', ""))
+        except Exception as e:
+            message = "Impossible d'installer le module '{}' : {}".format(module_id, e)
+            self.core.log(message)
+            raise Exception(message)
 
     def update(self, module_id):
-        pass
+        """
+
+        :param module_id:
+        :return:
+        """
+        rep = self.core.pollux.api.get("/api/modules/i/{}/hash".format(module_id))
+        if rep.get("success", False):
+            payload = rep.get("payload", {})
+            remote_hash = payload.get("hash", None)
+            if remote_hash != self.hash(module_id):
+                self.install(module_id)
+        else:
+            message = "Impossible de mettre à jour le module '{}'".format(module_id)
+            self.core.log(message)
+
 
 

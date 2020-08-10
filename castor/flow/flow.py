@@ -2,20 +2,21 @@
 
 from castor.helper import Setting
 from .transporter import Transporter
-from .node import Node
-from .link import Link
+from .environment import Environment
 
 
 class Flow:
 
-    def __init__(self, nodes:dict, links:list, settings=None):
+    def __init__(self, nodes:dict, links:dict, settings=None):
         self.nodes = nodes
         self.links = links
         self.settings = FlowSettings(settings)
+        self.environment = Environment()
         self.transporter = Transporter(self.links, self.settings.transporter)
         self.running = False
 
-    def start(self):
+    def start(self, environment:dict=None):
+        self.environment.build(environment)
         self.running = True
         for id, node in self.nodes.items():
             # Put a reference of the flow inside each node

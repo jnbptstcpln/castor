@@ -7,7 +7,7 @@ from time import sleep
 
 class Transporter(Thread):
 
-    def __init__(self, links, settings=None):
+    def __init__(self, links:dict, settings=None):
         super().__init__()
         self.links = links
         self.running = False
@@ -22,7 +22,7 @@ class Transporter(Thread):
 
     def run(self):
         while self.running:
-            for link in self.links:
+            for link in self.links.values():
                 # Check the source is full
                 if link.source.isset:
                     # Compute if we flush value from source to targets

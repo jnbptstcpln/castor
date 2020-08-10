@@ -25,6 +25,9 @@ class Node(Thread):
         for port_info in self.component.outputs:
             self.outputs[port_info['name']] = Port(port_info['name'], DatatypeLibrary.get(port_info['type']))
 
+        # Pass to the component a reference to the node
+        self.component.node = self
+
     def clear_inputs(self):
         for name, port in self.inputs.items():
             port.clear()
@@ -88,7 +91,9 @@ class Node(Thread):
 
                     # Set the outputs with the result
                     for i, port in enumerate(self.outputs.values()):
-                        port.set(output[i])
+                        # Only set the output if it is connected to other port
+                        if "{}:{}".format(self.id, port.name) in self.flow.links.keys():
+                            port.set(output[i])
 
                     # Clear inputs
                     self.clear_inputs()

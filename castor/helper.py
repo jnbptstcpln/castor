@@ -71,3 +71,12 @@ class Config(ConfigParser):
         self.core = core
         # Read config file
         self.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
+
+    def pollux(self, key, default=None):
+        return self.get("pollux", key, fallback=default)
+
+    def castor(self, key, default=None):
+        return self.get("castor", key, fallback=default)
+
+    def daemon(self, key, default=None):
+        return self.get("daemon", key, fallback=default)
