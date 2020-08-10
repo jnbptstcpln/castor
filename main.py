@@ -12,6 +12,6 @@ flow = core.open("flows/math.json")
 flow.start()
 
 from time import sleep
-sleep(5)
+sleep(2)
 
 flow.stop()

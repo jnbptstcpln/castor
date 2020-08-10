@@ -1,4 +1,5 @@
 
+import time
 from .flow import ComponentLibrary, Flow, Node, Link
 from .helper import Config
 from .pollux import Pollux
@@ -12,11 +13,12 @@ class Core:
         self.config = Config(self)
         self.library = ComponentLibrary(self)
         self.pollux = Pollux(self)
+        self.logs = []
 
     def open(self, file):
         return self.build_flow(json.load(open(file)))
 
-    def build_flow(self, flowData):
+    def build_flow(self, flowData:dict):
         # Create all node and save inputs and outputs reference
         nodes = {}
         inputs = {}
@@ -35,7 +37,7 @@ class Core:
             nodes[node.id] = node
 
         # Create links between ports
-        links = []
+        links = {}
         for _link in flowData.get('links', []):
             try:
                 source = outputs[_link.get('source')]
@@ -49,6 +51,12 @@ class Core:
                 except KeyError:
                     raise Exception(
                         "Erreur lors de la création du lien : aucun port ne correspond à '{}'".format(target_id))
-            links.append(Link(source, targets))
+            links[_link.get('source')] = Link(source, targets)
 
         return Flow(nodes, links, flowData.get("settings"))
+
+    def log(self, data):
+        self.logs.append({
+            'time': time.time(),
+            'data': data
+        })
