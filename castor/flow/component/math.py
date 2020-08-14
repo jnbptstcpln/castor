@@ -9,7 +9,7 @@ class Addition(Component):
         """
         :param a:float
         :param b:float
-        :return result:float
+        :return a+b:float
         """
         return a+b
 
@@ -19,6 +19,24 @@ class Multiplication(Component):
         """
         :param a:float
         :param b:float
-        :return result:float
+        :return a*b:float
         """
         return a*b
+
+class Substraction(Component):
+    def func(self, a, b):
+        """
+        :param a:float
+        :param b:float
+        :return a-b:float
+        """
+        return a-b
+
+class Division(Component):
+    def func(self, a, b):
+        """
+        :param a:float
+        :param b:float
+        :return a/b:float
+        """
+        return a/b
