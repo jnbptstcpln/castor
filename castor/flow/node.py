@@ -1,9 +1,9 @@
-from castor.datatype import Library as DatatypeLibrary
 from castor.helper import Setting
 from threading import Thread
 from time import sleep
 from .port import Port
 from castor.exception import StopException, ExitException
+from castor.datatype import Library as DatatypeLibrary
 
 
 class Node(Thread):
@@ -19,11 +19,11 @@ class Node(Thread):
 
         self.inputs = {}
         for port_info in self.component.inputs:
-            self.inputs[port_info['name']] = Port(port_info['name'], DatatypeLibrary.get(port_info['type']))
+            self.inputs[port_info['name']] = Port(port_info['name'], port_info['type'])
 
         self.outputs = {}
         for port_info in self.component.outputs:
-            self.outputs[port_info['name']] = Port(port_info['name'], DatatypeLibrary.get(port_info['type']))
+            self.outputs[port_info['name']] = Port(port_info['name'], port_info['type'])
 
         # Pass to the component a reference to the node
         self.component.node = self
@@ -33,16 +33,16 @@ class Node(Thread):
             port.clear()
 
     def start(self):
-        #self.log("start")
         self.running = True
         super().start()
 
     def stop(self):
-        #self.log("stop")
+        self.running = False
+
+    def kill(self):
         self.running = False
 
     def exit(self):
-        #self.log("exit")
         self.stop()
         if self.flow:
             self.flow.stop()
@@ -56,12 +56,29 @@ class Node(Thread):
                 if self.count >= self.settings.execution > 0:
                     self.stop()
 
-                # Preset fixed inputs
-                for name, value in self.settings.inputs.items():
-                    try:
-                        self.inputs[name].set(value)
-                    except KeyError:
-                        raise Exception("Aucun port d'entrée nommé '{}' au sein du noeud '{}'".format(name, self.id))
+                if len(self.inputs.keys()) > 0:
+                    disconnected_inputs = 0
+                    for name, port in self.inputs.items():
+                        if not self.flow.transporter.is_input_connected("{}:{}".format(self.id, name)):
+                            preset = self.settings.inputs.get(name, None)
+                            if preset is not None:
+                                port.set(preset)
+                            else:
+                                disconnected_inputs += 1
+                                port.set(DatatypeLibrary.default(port.type))
+
+                    # On détecte si aucun entrée n'est connecté et qu'aucune valeur n'a été spécifiée, le cas échéant
+                    # on arrête l'exécution du composant
+                    if disconnected_inputs >= len(self.inputs.keys()):
+                        self.flow.log(
+                            "Désactivation du noeud \"{}\" ({}) car aucune de ses entrées n'est utilisée"
+                                .format(
+                                self.id,
+                                self.settings.get("component")
+                            )
+                        )
+                        return
+
 
                 kwargs = {}
                 # Check if we should run the component
@@ -114,6 +131,7 @@ class Node(Thread):
 
             except BaseException as e:
                 self.flow.error("Erreur lors de l'exécution de {} : \"{}\"".format(self.settings.get("component") ,e))
+
 
     def log(self, message):
         print("{}> {}".format(self.id, message))

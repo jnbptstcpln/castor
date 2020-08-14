@@ -1,4 +1,5 @@
 
+from castor.datatype import Library as DatatypeLibrary
 from collections import deque
 from castor.helper import Setting
 
@@ -8,14 +9,15 @@ class Port:
     def __init__(self, name, type, settings=None):
         self.name = name
         self.type = type
+        self._type = DatatypeLibrary.get(self.type)
         self.settings = PortSettings(settings)
         self.value = None
         self.buffer = deque([])
 
     def cast(self, value):
-        if self.type:
+        if self._type:
             try:
-                return self.type(value)
+                return self._type(value)
             except BaseException as err:
                 raise Exception("Une erreur est survenu lors du casting : {}".format(err))
         return value

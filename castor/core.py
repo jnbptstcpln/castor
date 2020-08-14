@@ -55,10 +55,10 @@ class Core:
             except KeyError:
                 raise Exception(
                     "Erreur lors de la création du lien : aucun port ne correspond à '{}'".format(_link.get('source')))
-            targets = []
+            targets = {}
             for target_id in _link.get('targets', []):
                 try:
-                    targets.append(inputs[target_id])
+                    targets[target_id] = inputs[target_id]
                 except KeyError:
                     raise Exception(
                         "Erreur lors de la création du lien : aucun port ne correspond à '{}'".format(target_id))
