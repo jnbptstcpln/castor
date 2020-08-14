@@ -1,42 +1,86 @@
 
 from threading import Thread
 from castor import CastorCore
+from .helper import get_mac_address, Logger
+from .flow_wrapper import FlowWrapper
 import time
+import json
 
 
 class Daemon(Thread):
 
-    def __init__(self):
+    def __init__(self, name):
         super().__init__(daemon=True)
 
+        self.name = name
         self.running = False
         self.instance_id = None
+
 
         self.core = CastorCore()
         self.config = self.core.config
         self.pollux = self.core.pollux
-        self.logs = []
+        self.last_pollux_update = None
+
+        self.flows = {}
+
+        self.logger = Logger("DAEMON")
 
     def start(self):
         # Initiate the link with Pollux and store instance_id
         self.pollux_start()
         # Log the start
-        self.log("Start daemon with instance_id={}".format(self.instance_id))
+        self.log("Start daemon with as instance {}".format(self.instance_id))
         # Set the running flag to true
         self.running = True
         super().start()
 
     def stop(self):
+        # Construct the list of running wrapper
+        instances = []
+        for flowInstance, wrapper in self.flows.items():
+            instances.append(wrapper)
+
+        for wrapper in instances:
+            try:
+                wrapper.error("Arrêt du daemon {} hébergeant le processus".format(self.instance_id))
+            except:
+                pass
+
         # Log the stop
         self.log("Stop daemon".format(self.instance_id))
         self.running = False
 
+        try:
+            rep = self.core.pollux.api.post(
+                "/api/daemons/i/{}/stop".format(self.instance_id),
+                {
+                    'status': json.dumps(self.status())
+                }
+            )
+
+        except Exception as e:
+            pass
+
     def pollux_start(self):
         try:
-            rep = self.core.pollux.api.post("/api/daemons/start", {'name': self.config.daemon("name", "NO_NAME")})
+            rep = self.core.pollux.api.post(
+                "/api/daemons/start",
+                {
+                    'name': self.name,
+                    'machine': get_mac_address(),
+                    'machine_name': self.config.daemon("machine_name", "Machine générique"),
+                    'settings': json.dumps(
+                        {
+                            'concurrent_execution_limit': self.config.daemon("concurrent_execution_limit", 1)
+                        }
+                    ),
+                }
+            )
             if rep.get("success", False):
                 payload = rep.get("payload", {})
                 self.instance_id = payload.get('instance_id', None)
+                self.last_pollux_update = time.time()
 
             # If no instance_id was gotten from Pollux, log and raise an exception
             if self.instance_id is None:
@@ -51,23 +95,64 @@ class Daemon(Thread):
             raise Exception(e)
 
     def pollux_fetch(self):
-        rep = self.core.pollux.api.get("/api/daemons/i/{}/fetch".format(self.instance_id))
+        rep = self.core.pollux.api.post(
+            "/api/daemons/i/{}/fetch".format(self.instance_id),
+            {
+                'status': json.dumps(self.status())
+            }
+        )
         if rep.get("success", False):
+            self.last_pollux_update = time.time()
             payload = rep.get('payload', {})
-            # TODO: Execute received commands
+            flows = payload.get('flows', [])
+
+            for flow in flows:
+                flowInstance = flow.get("instance", None)
+                flowData = flow.get("scheme", None)
+                environment = flow.get("environment", None)
+                try:
+                    self.execute_flow(flowInstance, flowData, environment)
+                except:
+                    pass
+
         else:
             self.log("Une erreur a eu lieu lors de la requête 'fetch' vers Pollux : '{}'".format(
                 rep.get("message", "Aucun message reçu depuis pollux"))
             )
+            if time.time() - self.last_pollux_update > 30:
+                self.log("Aucune réponse positive de Pollux depuis plus de 30 secondes, arrêt du daemon.")
+                self.stop()
+
+    def execute_flow(self, flowInstance, flowData, environment):
+        try:
+            if not flowInstance:
+                raise Exception("Aucun identifiant d'instance spécifié")
+
+            self.flows[flowInstance] = FlowWrapper(self, flowInstance, self.core.build_flow(flowData), environment)
+            self.log("Lancement du processus {} avec l'environnement {}".format(flowInstance, environment))
+            self.flows[flowInstance].start()
+        except BaseException as e:
+            self.log("Impossible de lancer le processus {} : {}".format(flowInstance, e))
+            if flowInstance:
+                self.core.pollux.api.post(
+                    "/api/instances/{}/error".format(flowInstance),
+                    {
+                        'message': "{}".format(e)
+                    }
+                )
+
+
+    def status(self):
+        return {
+            'flow_instances': len(self.flows.keys()),
+            'logs': self.logger.pop()
+        }
 
     def run(self):
-        while True:
+        while self.running:
             self.pollux_fetch()
             # Add a tempo to the execution
             time.sleep(self.config.daemon("tempo", 5))
 
     def log(self, data):
-        self.logs.append({
-            'time': time.time(),
-            'data': data
-        })
+        self.logger.log(data)
