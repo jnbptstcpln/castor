@@ -1,10 +1,14 @@
-
+"""
+    Example d'utilisation du daemon
+"""
 import time
 from castor import Daemon
 
 
-daemon = Daemon()
+
+print("Press any key during execution to stop the daemon")
+
+daemon = Daemon("Daemon-Test")
 daemon.start()
-time.sleep(5)
+input()
 daemon.stop()
-print(daemon.logs)
