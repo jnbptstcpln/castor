@@ -76,6 +76,16 @@ class Doc:
             })
         return settings
 
+    @property
+    def requirements(self):
+        requirements = []
+        _requirements = self.entities.get("require", [])
+        for output in _requirements:
+            requirements.append({
+                'name': output[0]
+            })
+        return requirements
+
 
 class Config(ConfigParser):
 
@@ -105,11 +115,11 @@ class Logger:
     def log(self, message):
         print("{}> {}".format(self.name, message))
         self.logs.append({
-            'time': time.time(),
+            'time': int(round(time.time() * 1000)),
             'message': message
         })
         self.buffer.append({
-            'time': time.time(),
+            'time': int(round(time.time() * 1000)),
             'message': message
         })
 
