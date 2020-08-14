@@ -27,7 +27,7 @@ class Flow:
                 node.start()
             self.transporter.start()
         except BaseException as e:
-            self.error(e)
+            self.error("Erreur lors du démarrage de l'exécution : \"{}\"".format(e))
 
     def error(self, message):
         self.stop()

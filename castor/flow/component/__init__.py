@@ -1,11 +1,12 @@
 
+
 import importlib
 import hashlib
-import re
 import os
 
 from castor.exception import StopException, ExitException
 from castor.helper import Doc
+
 
 class Component:
 
@@ -84,7 +85,6 @@ class Library:
         self.core = core
         self.modules = {}
 
-
     def get_module(self, module_id, use_remote=True):
         """
         Return the corresponding module stored if self.modules or load it if it wasn't already
@@ -98,11 +98,11 @@ class Library:
                         self.update(module_id)
                     self.modules[module_id] = importlib.import_module("castor.flow.component." + module_id)
                 except ModuleNotFoundError as e:
-                    message = "Aucun module nommé '{}' n'a pu être trouvé en local".format(module_id)
+                    message = "Erreur lors de l'importation du module nommé '{}' : \"{}\"".format(module_id, e)
                     self.core.log(message)
                     raise Exception(message)
                 except BaseException as e:
-                    message = "Une erreur est survenu lors du chargement du module '{}' : {}".format(module_id, e)
+                    message = "Une erreur est survenu lors du chargement du module '{}' : \"{}\"".format(module_id, e)
                     self.core.log(message)
                     raise Exception(message)
 

@@ -137,7 +137,7 @@ class Daemon(Thread):
                 self.core.pollux.api.post(
                     "/api/instances/{}/error".format(flowInstance),
                     {
-                        'message': "{}".format(e)
+                        'message': "Erreur lors de l'initialisation : \"{}\"".format(e)
                     }
                 )
 

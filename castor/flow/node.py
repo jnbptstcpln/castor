@@ -113,7 +113,7 @@ class Node(Thread):
                     sleep(self.settings.tempo)
 
             except BaseException as e:
-                self.flow.error(e)
+                self.flow.error("Erreur lors de l'exécution de {} : \"{}\"".format(self.settings.get("component") ,e))
 
     def log(self, message):
         print("{}> {}".format(self.id, message))
