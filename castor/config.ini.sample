@@ -1,0 +1,13 @@
+# Modèle pour le fichier config.ini
+
+[pollux]
+# Domaine sur lequel une instance de Pollux est accessible
+host=http://pollux-instance.domain
+# Clé de l'API
+key=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+[daemon]
+# Nom de la machine hôte
+machine_name=Nom de la machine
+# Nombre maximal d'exécution simultanné
+concurent_execution_limit=10
