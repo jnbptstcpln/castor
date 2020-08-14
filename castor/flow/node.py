@@ -48,66 +48,72 @@ class Node(Thread):
             self.flow.stop()
 
     def run(self):
+
         while self.running:
 
-            if self.count >= self.settings.execution > 0:
-                self.stop()
+            try:
 
-            # Preset fixed inputs
-            for name, value in self.settings.inputs.items():
-                try:
-                    self.inputs[name].set(value)
-                except KeyError:
-                    raise Exception("Aucun port d'entrée nommé '{}' au sein du noeud '{}'".format(name, self.id))
-
-            kwargs = {}
-            # Check if we should run the component
-            should_run_component = True
-            # Check if all our inputs are set
-            for name, port in self.inputs.items():
-                if not port.isset:
-                    #self.log("{} is not set".format(name))
-                    should_run_component = False
-                else:
-                    # Build the kwargs from input ports
-                    kwargs[port.name] = port.value
-
-            # Check if all our outputs are free
-            for name, port in self.outputs.items():
-                if port.isset:
-                    #self.log("{} is full".format(name))
-                    should_run_component = False
-
-            if should_run_component:
-                #self.log("run")
-                # Run the component with the given parameters
-                try:
-                    output = self.component.func(**kwargs)
-                    # count that execution
-                    self.count += 1
-                    # Force the output to be a tuple
-                    if type(output) != tuple:
-                        output = tuple([output])
-
-                    # Set the outputs with the result
-                    for i, port in enumerate(self.outputs.values()):
-                        # Only set the output if it is connected to other port
-                        if "{}:{}".format(self.id, port.name) in self.flow.links.keys():
-                            port.set(output[i])
-
-                    # Clear inputs
-                    self.clear_inputs()
-
-                except StopException:
-                    # The component indicate that it have to stop
+                if self.count >= self.settings.execution > 0:
                     self.stop()
 
-                except ExitException:
-                    # The component indicate that the flow have to be stop
-                    self.exit()
-            else:
-                # To not overwhelm the cpu we set a tempo between iteration
-                sleep(self.settings.tempo)
+                # Preset fixed inputs
+                for name, value in self.settings.inputs.items():
+                    try:
+                        self.inputs[name].set(value)
+                    except KeyError:
+                        raise Exception("Aucun port d'entrée nommé '{}' au sein du noeud '{}'".format(name, self.id))
+
+                kwargs = {}
+                # Check if we should run the component
+                should_run_component = True
+                # Check if all our inputs are set
+                for name, port in self.inputs.items():
+                    if not port.isset:
+                        #self.log("{} is not set".format(name))
+                        should_run_component = False
+                    else:
+                        # Build the kwargs from input ports
+                        kwargs[port.name] = port.value
+
+                # Check if all our outputs are free
+                for name, port in self.outputs.items():
+                    if port.isset:
+                        #self.log("{} is full".format(name))
+                        should_run_component = False
+
+                if should_run_component:
+                    #self.log("run")
+                    # Run the component with the given parameters
+                    try:
+                        output = self.component.func(**kwargs)
+                        # count that execution
+                        self.count += 1
+                        # Force the output to be a tuple
+                        if type(output) != tuple:
+                            output = tuple([output])
+
+                        # Set the outputs with the result
+                        for i, port in enumerate(self.outputs.values()):
+                            # Only set the output if it is connected to other port
+                            if "{}:{}".format(self.id, port.name) in self.flow.links.keys():
+                                port.set(output[i])
+
+                        # Clear inputs
+                        self.clear_inputs()
+
+                    except StopException:
+                        # The component indicate that it have to stop
+                        self.stop()
+
+                    except ExitException:
+                        # The component indicate that the flow have to be stop
+                        self.exit()
+                else:
+                    # To not overwhelm the cpu we set a tempo between iteration
+                    sleep(self.settings.tempo)
+
+            except BaseException as e:
+                self.flow.error(e)
 
     def log(self, message):
         print("{}> {}".format(self.id, message))
