@@ -24,6 +24,11 @@ class Flow:
             for id, node in self.nodes.items():
                 # Put a reference of the flow inside each node
                 node.flow = self
+
+                # Given the flow execution mode, update node's settings
+                if self.settings.exec_mode == 'single':
+                    node.settings.set('execution', 1)
+
                 node.start()
             self.transporter.start()
         except BaseException as e:
@@ -32,6 +37,13 @@ class Flow:
     def error(self, message):
         self.stop()
         self.error_message = message
+
+    def number_of_running_nodes(self):
+        running_nodes = 0
+        for id, node in self.nodes.items():
+            if node.running:
+                running_nodes += 1
+        return running_nodes
 
     def stop(self):
         if self.running:
@@ -48,3 +60,7 @@ class FlowSettings(Setting):
     @property
     def transporter(self):
         return self.get('transporter', None)
+
+    @property
+    def exec_mode(self):
+        return self.get('exec_mode', 'single')
