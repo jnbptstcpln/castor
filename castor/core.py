@@ -3,6 +3,7 @@ import time
 from .flow import ComponentLibrary, Flow, Node, Link
 from .helper import Config
 from .pollux import Pollux
+from .lib import Library as LibLibrary
 
 import json
 
@@ -11,7 +12,8 @@ class Core:
 
     def __init__(self):
         self.config = Config(self)
-        self.library = ComponentLibrary(self)
+        self.component_library = ComponentLibrary(self)
+        self.lib_library = LibLibrary(self)
         self.pollux = Pollux(self)
         self.logs = []
 
@@ -24,9 +26,18 @@ class Core:
         inputs = {}
         outputs = {}
         for _node in flowData.get('nodes', []):
-            # Create the node with id, an instance of component get from library (_node is use as component's settings)
+            # Create the node with id, an instance of component get from component_library (node is use as component's settings)
             # and node's settings with _node
-            node = Node(_node.get('id'), self.library.get(_node.get('component'), _node), _node)
+            node = Node(_node.get('id'), self.component_library.get(_node.get('component'), _node), _node)
+
+            # Try to fullfil node's component lib's requirements
+            requirements_errors = []
+            for requirement in node.component.doc.requirements:
+                try:
+                    self.lib_library.require(requirement['name'])
+                except BaseException as e:
+                    raise e
+
             # Store reference for each inputs
             for name, port in node.inputs.items():
                 inputs['{}:{}'.format(node.id, name)] = port
