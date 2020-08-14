@@ -30,11 +30,11 @@ class Sleep(Component):
 class Exit(Component):
     def func(self, value):
         """
-        :description Permet de terminer l'exécution du processus
+        :description Permet de terminer l'exécution du processus tout en ajoutant aux logs la valeur passée en paramètre
         :size 0
         :param value:*:Valeur qui sera ajoutée aux logs
         """
-        self.flow.log("Exit : {}".format(value))
+        self.flow.log("Exit : \"{}\"".format(value))
         self.exit()
 
 
