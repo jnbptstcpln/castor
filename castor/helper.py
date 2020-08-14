@@ -1,3 +1,5 @@
+
+import time
 from configparser import ConfigParser
 
 class Setting:
@@ -20,7 +22,7 @@ class Doc:
         self.entities = {}
         # Parse the document
         for line in self.doc.split("\n"):
-            matches = re.search(r"^:(\w+) ([^:]+):?([^:]+)?:?([^:]+)?", line.strip())
+            matches = re.search(r"^:(\w+) ([^:]+):?([^:]+)?:?(.*)", line.strip())
             if matches:
                 name = matches.group(1)
                 data = []
@@ -62,6 +64,18 @@ class Doc:
             })
         return returns
 
+    @property
+    def settings(self):
+        settings = []
+        _settings = self.entities.get("setting", [])
+        for output in _settings:
+            settings.append({
+                'name': output[0],
+                'type': output[1],
+                'description': output[2],
+            })
+        return settings
+
 
 class Config(ConfigParser):
 
@@ -80,3 +94,30 @@ class Config(ConfigParser):
 
     def daemon(self, key, default=None):
         return self.get("daemon", key, fallback=default)
+
+class Logger:
+
+    def __init__(self, name="GENERAL"):
+        self.name = name
+        self.buffer = []
+        self.logs = []
+
+    def log(self, message):
+        print("{}> {}".format(self.name, message))
+        self.logs.append({
+            'time': time.time(),
+            'message': message
+        })
+        self.buffer.append({
+            'time': time.time(),
+            'message': message
+        })
+
+    def pop(self):
+        temp = self.buffer
+        self.buffer = []
+        return temp
+
+def get_mac_address():
+    import uuid
+    return ':'.join(['{:02x}'.format((uuid.getnode() >> ele) & 0xff) for ele in range(0, 8 * 6, 8)][::-1])

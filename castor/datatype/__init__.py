@@ -6,6 +6,10 @@ class Library:
     @staticmethod
     def get(id):
 
+        # Pour le type "*", on n'applique aucune forme de casting
+        if id == "*":
+            return lambda x:x
+
         builtin = {
             'int': int,
             'float': float,
