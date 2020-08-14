@@ -9,5 +9,5 @@ key=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 [daemon]
 # Nom de la machine hôte
 machine_name=Nom de la machine
-# Nombre maximal d'exécution simultanné
+# Nombre maximal d'exécution simultannées
 concurent_execution_limit=10
