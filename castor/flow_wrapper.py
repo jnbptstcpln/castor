@@ -26,15 +26,16 @@ class FlowWrapper(Thread):
         self.stop()
 
     def stop(self):
-        if self.flow.error_message is not None:
-            self.daemon.log("Arrêt du processus {} suite à une erreur : {}".format(self.flowInstance, self.flow.error_message))
-        else:
-            self.daemon.log(
-                "Fin d'exécution du processus {}".format(self.flowInstance))
+        if self.running:
+            if self.flow.error_message is not None:
+                self.daemon.log("Arrêt du processus {} suite à une erreur : {}".format(self.flowInstance, self.flow.error_message))
+            else:
+                self.daemon.log(
+                    "Fin d'exécution du processus {}".format(self.flowInstance))
 
-        self.flow.stop()
-        self.running = False
-        del self.daemon.flows[self.flowInstance]
+            self.flow.stop()
+            self.running = False
+            del self.daemon.flows[self.flowInstance]
 
     def pollux_update(self):
 
@@ -95,6 +96,10 @@ class FlowWrapper(Thread):
                 else:
                     self.pollux_complete()
                 return
+
+            # If all nodes are stopped, we stop the flow
+            if self.flow.number_of_running_nodes() == 0:
+                self.flow.stop()
 
             # Update Pollux each 5 seconds
             if time.time() - self.last_pollux_update > 5:
