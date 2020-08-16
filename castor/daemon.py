@@ -35,7 +35,7 @@ class Daemon(Thread):
         self.running = True
         super().start()
 
-    def stop(self):
+    def _stop(self, message=None):
         # Construct the list of running wrapper
         instances = []
         for flowInstance, wrapper in self.flows.items():
@@ -48,8 +48,14 @@ class Daemon(Thread):
                 pass
 
         # Log the stop
-        self.log("Stop daemon".format(self.instance_id))
+        if message:
+            self.log("Stop daemon : {}".format(message))
+        else:
+            self.log("Stop daemon")
         self.running = False
+
+    def stop(self):
+        self._stop()
 
         try:
             rep = self.core.pollux.api.post(
@@ -104,7 +110,13 @@ class Daemon(Thread):
         if rep.get("success", False):
             self.last_pollux_update = time.time()
             payload = rep.get('payload', {})
+            state = payload.get('state', 'state_dead')
             flows = payload.get('flows', [])
+
+            # If Pollux tell that the daemon is dead, "force" stopping the daemon
+            if state == 'state_dead':
+                self._stop("Pollux considère que le daemon est mort")
+                return
 
             for flow in flows:
                 flowInstance = flow.get("instance", None)
@@ -129,7 +141,7 @@ class Daemon(Thread):
                 raise Exception("Aucun identifiant d'instance spécifié")
 
             self.flows[flowInstance] = FlowWrapper(self, flowInstance, self.core.build_flow(flowData), environment)
-            self.log("Lancement du processus {} avec l'environnement {}".format(flowInstance, environment))
+            self.log("Lancement du processus {} ({})".format(flowInstance, self.flows[flowInstance].flow.settings.get('name')))
             self.flows[flowInstance].start()
         except BaseException as e:
             self.log("Impossible de lancer le processus {} : {}".format(flowInstance, e))
