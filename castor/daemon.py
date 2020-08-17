@@ -9,10 +9,11 @@ import json
 
 class Daemon(Thread):
 
-    def __init__(self, name):
+    def __init__(self, name, domain="default"):
         super().__init__(daemon=True)
 
         self.name = name
+        self.domain = domain
         self.running = False
         self.instance_id = None
 
@@ -30,7 +31,7 @@ class Daemon(Thread):
         # Initiate the link with Pollux and store instance_id
         self.pollux_start()
         # Log the start
-        self.log("Start daemon inside domain \"{}\" as instance {}".format(self.config.daemon("domain", "default"), self.instance_id))
+        self.log("Start daemon inside domain \"{}\" as instance {}".format(self.domain, self.instance_id))
         # Set the running flag to true
         self.running = True
         super().start()
@@ -74,7 +75,7 @@ class Daemon(Thread):
                 "/api/daemons/start",
                 {
                     'name': self.name,
-                    'domain': self.config.daemon("domain", "default"),
+                    'domain': self.domain,
                     'machine': get_mac_address(),
                     'machine_name': self.config.daemon("machine_name", "Machine générique"),
                     'settings': json.dumps(

@@ -8,8 +8,6 @@ key=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 [daemon]
 # Domaine d'exécution du daemon
-domain=Domaine d'exécution
-# Nom de la machine hôte
 machine_name=Nom de la machine
 # Nombre maximal d'exécution simultannées
 concurent_execution_limit=10
