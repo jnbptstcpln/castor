@@ -30,7 +30,7 @@ class Daemon(Thread):
         # Initiate the link with Pollux and store instance_id
         self.pollux_start()
         # Log the start
-        self.log("Start daemon with as instance {}".format(self.instance_id))
+        self.log("Start daemon inside domain \"{}\" as instance {}".format(self.config.daemon("domaine", "default"), self.instance_id))
         # Set the running flag to true
         self.running = True
         super().start()
@@ -74,6 +74,7 @@ class Daemon(Thread):
                 "/api/daemons/start",
                 {
                     'name': self.name,
+                    'domain': self.config.daemon("domaine", "default"),
                     'machine': get_mac_address(),
                     'machine_name': self.config.daemon("machine_name", "Machine générique"),
                     'settings': json.dumps(
