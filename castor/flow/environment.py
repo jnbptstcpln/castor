@@ -1,4 +1,5 @@
 
+import copy
 
 class Environment:
 
@@ -13,6 +14,6 @@ class Environment:
 
     def build(self, items=None):
         if type(items) is dict:
-            self.items = items
+            self.items = copy.deepcopy(items)
         else:
             self.items = {}

@@ -1,9 +1,9 @@
 
 import time
 from castor.helper import Setting, Logger
+from castor.exception import RestartException
 from .transporter import Transporter
 from .environment import Environment
-
 
 class Flow:
 
@@ -12,14 +12,21 @@ class Flow:
         self.links = links
         self.settings = FlowSettings(settings)
         self.environment = Environment()
+        self.environment_initial = Environment()
         self.transporter = Transporter(self.links, self.settings.transporter)
+
         self.running = False
+        self.restarting = False
+
+        self.keep_environment = False
+
         self.error_message = None
         self.logger = Logger("FLOW")
 
     def start(self, environment:dict=None):
         try:
             self.environment.build(environment)
+            self.environment_initial.build(environment)
             self.running = True
             for id, node in self.nodes.items():
                 # Put a reference of the flow inside each node
@@ -33,6 +40,12 @@ class Flow:
             self.transporter.start()
         except BaseException as e:
             self.error("Erreur lors du démarrage de l'exécution : \"{}\"".format(e))
+
+    def restart(self, keep_environment=False):
+        self.restarting = True
+        self.keep_environment = keep_environment
+
+        self.stop()
 
     def error(self, message):
         self.stop()

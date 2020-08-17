@@ -1,17 +1,19 @@
 
 import json
-from threading import Thread
+import copy
 import time
+from threading import Thread
 
 
 class FlowWrapper(Thread):
 
-    def __init__(self, daemon, flowInstance, flow, environment):
+    def __init__(self, daemon, flowInstance, flowData, environment):
         super().__init__()
 
         self.daemon = daemon
         self.flowInstance = flowInstance
-        self.flow = flow
+        self.flowData = flowData
+        self.flow = self.daemon.core.build_flow(flowData)
         self.last_pollux_update = time.time()
         self.environment = environment
         self.running = False
@@ -90,12 +92,28 @@ class FlowWrapper(Thread):
         while self.running:
 
             if not self.flow.running:
-                self.stop()
-                if self.flow.error_message is not None:
-                    self.pollux_error(self.flow.error_message)
+
+                if self.flow.restarting:
+
+                    # Keep the same logger to keep logs
+                    logger = self.flow.logger
+                    # Deep copying the environment (initial or current)
+                    environment = copy.deepcopy(self.flow.environment_initial.items)
+                    if self.flow.keep_environment:
+                        environment = copy.deepcopy(self.flow.environment.items)
+                    # build a brand new flos
+                    self.flow = self.daemon.core.build_flow(self.flowData)
+                    # Set the logger
+                    self.flow.logger = logger
+                    # Start with the environment
+                    self.flow.start(environment)
                 else:
-                    self.pollux_complete()
-                return
+                    self.stop()
+                    if self.flow.error_message is not None:
+                        self.pollux_error(self.flow.error_message)
+                    else:
+                        self.pollux_complete()
+                    return
 
             # If all nodes are stopped, we stop the flow
             if self.flow.number_of_running_nodes() == 0:

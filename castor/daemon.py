@@ -142,7 +142,7 @@ class Daemon(Thread):
             if not flowInstance:
                 raise Exception("Aucun identifiant d'instance spécifié")
 
-            self.flows[flowInstance] = FlowWrapper(self, flowInstance, self.core.build_flow(flowData), environment)
+            self.flows[flowInstance] = FlowWrapper(self, flowInstance, flowData, environment)
             self.log("Lancement du processus {} ({})".format(flowInstance, self.flows[flowInstance].flow.settings.get('name')))
             self.flows[flowInstance].start()
         except BaseException as e:

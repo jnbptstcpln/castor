@@ -3,7 +3,7 @@ from threading import Thread
 from time import sleep
 import traceback
 from .port import Port
-from castor.exception import StopException, ExitException, NoReturnException
+from castor.exception import StopException, ExitException, NoReturnException, RestartException
 from castor.datatype import Library as DatatypeLibrary
 
 
@@ -18,16 +18,23 @@ class Node(Thread):
         self.flow = None
         self.count = 0
 
-        self.inputs = {}
-        for port_info in self.component.inputs:
-            self.inputs[port_info['name']] = Port(port_info['name'], port_info['type'])
-
-        self.outputs = {}
-        for port_info in self.component.outputs:
-            self.outputs[port_info['name']] = Port(port_info['name'], port_info['type'])
+        self.inputs = self.build_inputs()
+        self.outputs = self.build_outputs()
 
         # Pass to the component a reference to the node
         self.component.node = self
+
+    def build_inputs(self):
+        inputs = {}
+        for port_info in self.component.inputs:
+            inputs[port_info['name']] = Port(port_info['name'], port_info['type'])
+        return inputs
+
+    def build_outputs(self):
+        outputs = {}
+        for port_info in self.component.outputs:
+            outputs[port_info['name']] = Port(port_info['name'], port_info['type'])
+        return outputs
 
     def clear_inputs(self):
         for name, port in self.inputs.items():
@@ -114,7 +121,8 @@ class Node(Thread):
                         for i, port in enumerate(self.outputs.values()):
                             # Only set the output if it is connected to other port
                             if "{}:{}".format(self.id, port.name) in self.flow.links.keys():
-                                port.set(output[i])
+                                if output[i] is not None:
+                                    port.set(output[i])
 
                         # Clear inputs
                         self.clear_inputs()
@@ -128,8 +136,18 @@ class Node(Thread):
                     except ExitException as e:
                         if e.message:
                             self.flow.log("Arrêt du processus demandé par {} ({}) : {}".format(self.id, self.settings.get("component"), e.message))
+                        else:
+                            self.flow.log("Arrêt du processus demandé par {} ({})".format(self.id,self.settings.get("component")))
                         # The component indicate that the flow have to be stop
                         self.exit()
+
+                    except RestartException as e:
+                        if e.message:
+                            self.flow.log("Redémarrage du processus demandé par {} ({}) : {}".format(self.id, self.settings.get("component"), e.message))
+                        else:
+                            self.flow.log("Redémarrage du processus demandé par {} ({})".format(self.id,self.settings.get("component")))
+                        # The component indicate that the flow have to be stop
+                        self.flow.restart(e.keep_environment)
 
                     except NoReturnException:
                         # The component indicate that output should not be transmitted
