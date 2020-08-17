@@ -1,8 +1,9 @@
 from castor.helper import Setting
 from threading import Thread
 from time import sleep
+import traceback
 from .port import Port
-from castor.exception import StopException, ExitException
+from castor.exception import StopException, ExitException, NoReturnException
 from castor.datatype import Library as DatatypeLibrary
 
 
@@ -118,19 +119,28 @@ class Node(Thread):
                         # Clear inputs
                         self.clear_inputs()
 
-                    except StopException:
+                    except StopException as e:
+                        if e.message:
+                            self.flow.log("Arrêt de {} ({}) : {}".format(self.id, self.settings.get("component"), e.message))
                         # The component indicate that it have to stop
                         self.stop()
 
-                    except ExitException:
+                    except ExitException as e:
+                        if e.message:
+                            self.flow.log("Arrêt du processus demandé par {} ({}) : {}".format(self.id, self.settings.get("component"), e.message))
                         # The component indicate that the flow have to be stop
                         self.exit()
+
+                    except NoReturnException:
+                        # The component indicate that output should not be transmitted
+                        self.clear_inputs()
                 else:
                     # To not overwhelm the cpu we set a tempo between iteration
                     sleep(self.settings.tempo)
 
             except BaseException as e:
-                self.flow.error("Erreur lors de l'exécution de {} : \"{}\"".format(self.settings.get("component") ,e))
+                traceback.print_exc()
+                self.flow.error("Erreur lors de l'exécution de {} :\n{}".format(self.settings.get("component") , traceback.format_exc()))
 
 
     def log(self, message):

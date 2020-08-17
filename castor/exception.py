@@ -1,8 +1,17 @@
 
+class NoReturnException(Exception):
+    def __init__(self, message=None):
+        super().__init__()
+        self.message = message
+
 
 class StopException(Exception):
-    pass
+    def __init__(self, message=None):
+        super().__init__()
+        self.message = message
 
 
 class ExitException(Exception):
-    pass
+    def __init__(self, message=None):
+        super().__init__()
+        self.message = message
