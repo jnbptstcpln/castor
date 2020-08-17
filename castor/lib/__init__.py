@@ -1,5 +1,6 @@
 import importlib
 import hashlib
+import codecs
 import os
 
 
@@ -106,7 +107,7 @@ class Library:
                 # Create parent directories
                 if not os.path.exists(os.path.dirname(path)):
                     os.makedirs(os.path.dirname(path))
-                with open(path, 'w') as f:
+                with codecs.open(path, 'w', 'utf-8') as f:
                     f.write(payload.get('content', ""))
         except Exception as e:
             message = "Impossible d'installer le lib '{}' : {}".format(lib_id, e)
