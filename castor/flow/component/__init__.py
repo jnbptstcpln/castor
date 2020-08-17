@@ -5,7 +5,7 @@ import hashlib
 import codecs
 import os
 
-from castor.exception import StopException, ExitException
+from castor.exception import StopException, ExitException, RestartException
 from castor.helper import Doc
 
 
@@ -60,6 +60,10 @@ class Component:
     def exit(self):
         """Stop the execution of the flow"""
         raise ExitException()
+
+    def restart(self, keep_environment=False, message=""):
+        """Restart execution of the flow"""
+        raise RestartException(keep_environment, message)
 
 
 class ComponentSettings:
