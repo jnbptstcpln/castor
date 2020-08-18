@@ -88,6 +88,10 @@ class Library:
 
     def __init__(self, core):
         self.core = core
+        self._modules = {}
+        self.modules = {}
+
+    def reload(self):
         self.modules = {}
 
     def get_module(self, module_id, use_remote=True):
@@ -99,9 +103,18 @@ class Library:
             path = self.id_to_path(module_id)
             if os.path.exists(path):
                 try:
+                    # Update the module
                     if use_remote:
                         self.update(module_id)
-                    self.modules[module_id] = importlib.import_module("castor.flow.component." + module_id)
+
+                    # Check if the module was already loaded
+                    if module_id in self._modules.keys():
+                        self._modules[module_id] = importlib.reload(self._modules[module_id])
+                    else:
+                        self._modules[module_id] = importlib.import_module("castor.flow.component." + module_id)
+
+                    self.modules[module_id] = self._modules[module_id]
+
                 except ModuleNotFoundError as e:
                     message = "Erreur lors de l'importation du module nommé '{}' : \"{}\"".format(module_id, e)
                     self.core.log(message)

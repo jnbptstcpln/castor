@@ -8,6 +8,10 @@ class Library:
 
     def __init__(self, core):
         self.core = core
+        self._libs = {}
+        self.libs = {}
+
+    def reload(self):
         self.libs = {}
 
     def get_lib(self, lib_id, use_remote=True):
@@ -17,12 +21,20 @@ class Library:
         """
         if not lib_id in self.libs.keys():
             path = self.id_to_path(lib_id)
-            print(path)
             if os.path.exists(path):
                 try:
+                    # Update the lib
                     if use_remote:
                         self.update(lib_id)
-                    self.libs[lib_id] = importlib.import_module("castor.lib." + lib_id)
+
+                    # Check if the lib was already loaded
+                    if lib_id in self._libs.keys():
+                        self._libs[lib_id] = importlib.reload(self._libs[lib_id])
+                    else:
+                        self._libs[lib_id] = importlib.import_module("castor.lib." + lib_id)
+
+                    self.libs[lib_id] = self._libs[lib_id]
+
                 except ModuleNotFoundError as e:
                     message = "Aucune librairie nommée '{}' n'a pu être trouvée en local".format(lib_id)
                     self.core.log(message)
