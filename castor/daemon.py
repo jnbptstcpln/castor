@@ -10,7 +10,7 @@ import json
 
 class Daemon(Thread):
 
-    def __init__(self, name, domain="default"):
+    def __init__(self, name, domain="default", config=None):
         super().__init__(daemon=True)
 
         self.name = name
@@ -18,10 +18,10 @@ class Daemon(Thread):
         self.running = False
         self.instance_id = None
 
-
-        self.core = CastorCore()
+        self.core = CastorCore(config)
         self.config = self.core.config
         self.pollux = self.core.pollux
+
         self.last_pollux_update = None
 
         self.flows = {}
@@ -82,37 +82,33 @@ class Daemon(Thread):
         self.core.lib_library.reload()
 
     def pollux_start(self):
-        try:
-            rep = self.core.pollux.api.post(
-                "/api/daemons/start",
-                {
-                    'name': self.name,
-                    'domain': self.domain,
-                    'machine': get_mac_address(),
-                    'machine_name': self.config.daemon("machine_name", "Machine générique"),
-                    'settings': json.dumps(
-                        {
-                            'concurrent_execution_limit': self.config.daemon("concurrent_execution_limit", 1)
-                        }
-                    ),
-                }
-            )
-            if rep.get("success", False):
-                payload = rep.get("payload", {})
-                self.instance_id = payload.get('instance_id', None)
-                self.last_pollux_update = time.time()
+        rep = self.core.pollux.api.post(
+            "/api/daemons/start",
+            {
+                'name': self.name,
+                'domain': self.domain,
+                'machine': get_mac_address(),
+                'machine_name': self.config.daemon("machine_name", "Machine générique"),
+                'settings': json.dumps(
+                    {
+                        'concurrent_execution_limit': self.config.daemon("concurrent_execution_limit", 1)
+                    }
+                ),
+            }
+        )
+        if rep.get("success", False):
+            payload = rep.get("payload", {})
+            self.instance_id = payload.get('instance_id', None)
+            self.last_pollux_update = time.time()
 
-            # If no instance_id was gotten from Pollux, log and raise an exception
-            if self.instance_id is None:
-                raise Exception(
-                    "Impossible de lancer le deamon, une erreur a lieu lors de la connexion à Pollux : '{}'"
-                        .format(
-                            rep.get("message", "Aucun message reçu depuis pollux")
-                        )
-                )
-        except Exception as e:
-            self.log(e)
-            raise Exception(e)
+        # If no instance_id was gotten from Pollux, log and raise an exception
+        if self.instance_id is None:
+            raise Exception(
+                "Impossible de lancer le deamon, une erreur a lieu lors de la connexion à Pollux : '{}'"
+                    .format(
+                        rep.get("message", "Aucun message reçu depuis pollux")
+                    )
+            )
 
     def pollux_fetch(self):
         rep = self.core.pollux.api.post(

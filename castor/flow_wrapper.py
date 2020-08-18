@@ -10,10 +10,10 @@ class FlowWrapper(Thread):
     def __init__(self, daemon, flowInstance, flowData, environment):
         super().__init__()
 
-        self.daemon = daemon
+        self._daemon = daemon
         self.flowInstance = flowInstance
         self.flowData = flowData
-        self.flow = self.daemon.core.build_flow(flowData)
+        self.flow = self._daemon.core.build_flow(flowData)
         self.flow.logger.name = "FLOW {}".format(flowInstance[0:10])
         self.last_pollux_update = time.time()
         self.environment = environment
@@ -31,18 +31,18 @@ class FlowWrapper(Thread):
     def stop(self):
         if self.running:
             if self.flow.error_message is not None:
-                self.daemon.log("Arrêt du processus {} suite à une erreur : {}".format(self.flowInstance, self.flow.error_message))
+                self._daemon.log("Arrêt du processus {} suite à une erreur : {}".format(self.flowInstance, self.flow.error_message))
             else:
-                self.daemon.log(
+                self._daemon.log(
                     "Fin d'exécution du processus {}".format(self.flowInstance))
 
             self.flow.stop()
             self.running = False
-            del self.daemon.flows[self.flowInstance]
+            del self._daemon.flows[self.flowInstance]
 
     def pollux_update(self):
 
-        rep = self.daemon.core.pollux.api.post(
+        rep = self._daemon.core.pollux.api.post(
             "/api/instances/{}/update".format(self.flowInstance),
             {
                 'status': json.dumps(self.status())
@@ -67,7 +67,7 @@ class FlowWrapper(Thread):
                 self.stop()
 
     def pollux_complete(self):
-        self.daemon.core.pollux.api.post(
+        self._daemon.core.pollux.api.post(
             "/api/instances/{}/complete".format(self.flowInstance),
             {
                 'status': json.dumps(self.status())
@@ -75,7 +75,7 @@ class FlowWrapper(Thread):
         )
 
     def pollux_error(self, message):
-        self.daemon.core.pollux.api.post(
+        self._daemon.core.pollux.api.post(
             "/api/instances/{}/error".format(self.flowInstance),
             {
                 'status': json.dumps(self.status()),
@@ -103,7 +103,7 @@ class FlowWrapper(Thread):
                     if self.flow.keep_environment:
                         environment = copy.deepcopy(self.flow.environment.items)
                     # build a brand new flos
-                    self.flow = self.daemon.core.build_flow(self.flowData)
+                    self.flow = self._daemon.core.build_flow(self.flowData)
                     # Set the logger
                     self.flow.logger = logger
                     # Start with the environment

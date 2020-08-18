@@ -92,12 +92,18 @@ class Doc:
 
 class Config(ConfigParser):
 
-    def __init__(self, core):
+    def __init__(self, core, config=None):
         super().__init__()
         import os
         self.core = core
         # Read config file
-        self.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
+        if config is None:
+            self.read(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini"))
+        else:
+            if os.path.isfile(config):
+                self.read(config)
+            else:
+                raise FileNotFoundError("Le fichier de configuration \"{}\" n'existe pas".format(config))
 
     def pollux(self, key, default=None):
         return self.get("pollux", key, fallback=default)

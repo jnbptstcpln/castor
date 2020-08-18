@@ -10,8 +10,8 @@ import json
 
 class Core:
 
-    def __init__(self):
-        self.config = Config(self)
+    def __init__(self, config=None):
+        self.config = Config(self, config)
         self.component_library = ComponentLibrary(self)
         self.lib_library = LibLibrary(self)
         self.pollux = Pollux(self)
