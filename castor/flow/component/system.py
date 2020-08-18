@@ -128,3 +128,31 @@ class Date(Component):
         from datetime import datetime
         format = self.settings.get("format", "%d/%m/%Y %H:%M:%S")
         return datetime.now().strftime(format)
+
+
+class Increment(Component):
+    def func(self, value):
+        """
+        :description Permet d'incrémenter une variable d'environnement
+        :size 0
+        :param value:*:Valeur pour transmettre le flux d'exécution
+        :return value:*:Transmission de la variable reçue en entrée
+        :setting variable_name:string:Nom de la variable à incrémenter
+        """
+        variable_name = self.settings.get("variable_name")
+        self.environment.set(variable_name, int(self.environment.get(variable_name, "0")) + 1)
+        return value
+
+
+class Decrement(Component):
+    def func(self, value):
+        """
+        :description Permet de décrémenter une variable d'environnement
+        :size 0
+        :param value:*:Valeur pour transmettre le flux d'exécution
+        :return value:*:Transmission de la variable reçue en entrée
+        :setting variable_name:string:Nom de la variable à décrémenter
+        """
+        variable_name = self.settings.get("variable_name")
+        self.environment.set(variable_name, int(self.environment.get(variable_name, "0")) - 1)
+        return value
