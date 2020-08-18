@@ -1,14 +1,14 @@
 """
     Example d'utilisation du daemon
 """
-import time
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
 from castor import Daemon
-
-
-
-print("Press any key during execution to stop the daemon")
 
 daemon = Daemon("Daemon-Test")
 daemon.start()
-input()
-daemon.stop()
+while daemon.running:
+    pass
