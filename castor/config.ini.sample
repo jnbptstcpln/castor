@@ -11,3 +11,5 @@ key=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 machine_name=Nom de la machine
 # Nombre maximal d'exécution simultannées
 concurent_execution_limit=10
+# Le daemon vérifiera la présence de potentielles mise à jour des modules/libraries avant l'exécution des processus
+auto_reload=true

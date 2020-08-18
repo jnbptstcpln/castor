@@ -3,6 +3,7 @@ from threading import Thread
 from castor import CastorCore
 from .helper import get_mac_address, Logger
 from .flow_wrapper import FlowWrapper
+from .exception import ExitException
 import time
 import json
 
@@ -58,16 +59,27 @@ class Daemon(Thread):
     def stop(self):
         self._stop()
 
+
         try:
+            # In order to be able to send the request we keep the daemon running
+            self.running = True
             rep = self.core.pollux.api.post(
                 "/api/daemons/i/{}/stop".format(self.instance_id),
                 {
                     'status': json.dumps(self.status())
                 }
             )
-
-        except Exception as e:
+            # After sending the request we can finally stop the daemon
+            self.running = False
+        except BaseException:
+            self.running = False
             pass
+
+
+
+    def reload(self):
+        self.core.component_library.reload()
+        self.core.lib_library.reload()
 
     def pollux_start(self):
         try:
@@ -113,12 +125,22 @@ class Daemon(Thread):
             self.last_pollux_update = time.time()
             payload = rep.get('payload', {})
             state = payload.get('state', 'state_dead')
+            queue = payload.get('queue', [])
             flows = payload.get('flows', [])
 
             # If Pollux tell that the daemon is dead, "force" stopping the daemon
             if state == 'state_dead':
                 self._stop("Pollux considère que le daemon est mort")
                 return
+
+            try:
+                for cmd in queue:
+                    self.execute_command(cmd['command'], cmd['settings'])
+            except ExitException:
+                return
+
+            if self.config.daemon("auto_reload", "true") == "true":
+                self.reload()
 
             for flow in flows:
                 flowInstance = flow.get("instance", None)
@@ -155,6 +177,14 @@ class Daemon(Thread):
                     }
                 )
 
+    def execute_command(self, command, settings):
+        if command == "stop":
+            self.stop()
+            raise ExitException()
+        elif command == "reload":
+            self.reload()
+        else:
+            self.log("Commande inconnue : \"{}\"".format(command))
 
     def status(self):
         return {
@@ -166,7 +196,7 @@ class Daemon(Thread):
         while self.running:
             self.pollux_fetch()
             # Add a tempo to the execution
-            time.sleep(self.config.daemon("tempo", 5))
+            time.sleep(self.config.daemon("tempo", 1))
 
     def log(self, data):
         self.logger.log(data)
