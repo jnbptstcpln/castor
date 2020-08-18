@@ -14,6 +14,7 @@ class FlowWrapper(Thread):
         self.flowInstance = flowInstance
         self.flowData = flowData
         self.flow = self.daemon.core.build_flow(flowData)
+        self.flow.logger.name = "FLOW {}".format(flowInstance[0:10])
         self.last_pollux_update = time.time()
         self.environment = environment
         self.running = False
